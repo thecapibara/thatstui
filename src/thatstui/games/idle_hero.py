@@ -506,10 +506,10 @@ class IdleHero(Game):
         h_frac = self.hp / self.max_hp if self.max_hp > 0 else 0
         hc = "green" if h_frac >= 0.5 else ("yellow" if h_frac >= 0.25 else "red")
         return [
-            f"❤️ {self._tr('hp_label')}: [{hc}]{self.hp:.0f}/{self.max_hp:.0f}[/]",
-            f"⚔️ {self._tr('floor_label')} [red]{self.floor}[/]  {self._tr('lv_label')}[cyan]{self.level}[/]",
-            f"💰 {self._tr('gold_label')}: [yellow]{self.gold:.1f}[/]",
-            f"👾 {self._tr('xp_label')}: {self.xp:.0f}/{self._xp_needed():.0f}",
+            f"[red]♥[/] {self._tr('hp_label')}: [{hc}]{self.hp:.0f}/{self.max_hp:.0f}[/]",
+            f"[red]⚔[/] {self._tr('floor_label')} [red]{self.floor}[/]  {self._tr('lv_label')}[cyan]{self.level}[/]",
+            f"[yellow]$[/] {self._tr('gold_label')}: [yellow]{self.gold:.1f}[/]",
+            f"[cyan]★[/] {self._tr('xp_label')}: {self.xp:.0f}/{self._xp_needed():.0f}",
         ]
 
     @staticmethod
@@ -522,38 +522,65 @@ class IdleHero(Game):
         empty = length - filled
         return "█" * filled + "░" * empty
 
-    def render_grid(self) -> str:
-        """Render the dungeon arena as a ~44x16 multi-line string."""
+    def render_grid(self) -> Text:
+        """Render the dungeon arena as a ~44x16 multi-line Text object."""
         W = GRID_WIDTH
-        lines: list[str] = []
+        from rich.text import Text
 
-        def pad(s: str) -> str:
-            return s.ljust(W)
+        lines: list[Text] = []
+
+        # Helper to construct a padded line with borders
+        def make_bordered_line(content_markup: str) -> Text:
+            content = Text.from_markup(content_markup)
+            current_len = content.cell_len
+            needed_padding = (W - 2) - current_len
+            if needed_padding > 0:
+                content.append(" " * needed_padding)
+            elif needed_padding < 0:
+                content = content[:(W - 2)]
+            
+            line = Text("║") + content + Text("║")
+            return line
+
+        # Helper for centered line
+        def make_centered_line(content_markup: str) -> Text:
+            content = Text.from_markup(content_markup)
+            current_len = content.cell_len
+            needed_padding = (W - 2) - current_len
+            if needed_padding > 0:
+                left_pad = needed_padding // 2
+                right_pad = needed_padding - left_pad
+                content = Text(" " * left_pad) + content + Text(" " * right_pad)
+            elif needed_padding < 0:
+                content = content[:(W - 2)]
+            
+            line = Text("║") + content + Text("║")
+            return line
 
         # ── top border ──
-        lines.append("╔" + "═" * (W - 2) + "╗")
+        lines.append(Text("╔" + "═" * (W - 2) + "╗"))
 
         # ── coloured header line 1: title + floor/level ──
         hdr1 = (
-            f"⚔️[bold]{self._tr('hero_title')}[/] {self._tr('floor_abbr')}[red]{self.floor}[/] {self._tr('lv_abbr')}[cyan]{self.level}[/]"
+            f"[red]⚔[/] [bold]{self._tr('hero_title')}[/] {self._tr('floor_abbr')}[red]{self.floor}[/] {self._tr('lv_abbr')}[cyan]{self.level}[/]"
         )
-        lines.append("║" + hdr1.center(W - 2) + "║")
+        lines.append(make_centered_line(hdr1))
 
         # ── coloured header line 2: gold + xp ──
         hdr2 = (
-            f"💰[yellow]{self.gold:.1f}[/]  "
+            f"[yellow]$[/] [yellow]{self.gold:.1f}[/]  "
             f"{self._tr('xp_abbr')} {self.xp:.0f}/{self._xp_needed():.0f}"
         )
-        lines.append("║" + hdr2.center(W - 2) + "║")
+        lines.append(make_centered_line(hdr2))
 
         # ── blank separator ──
-        lines.append("║" + " " * (W - 2) + "║")
+        lines.append(Text("║" + " " * (W - 2) + "║"))
 
         # ── arena — hero left, monster right ──
-        hero_glyph = "[cyan]🧙[/]"
-        mon_glyph = "[red]👾[/]"
+        hero_glyph = "[cyan]@[/]"
+        mon_glyph = "[red]M[/]"
         arena_line = f"     {hero_glyph}               {mon_glyph}"
-        lines.append("║" + arena_line.ljust(W - 2) + "║")
+        lines.append(make_bordered_line(arena_line))
 
         # ── HP bars side by side ──
         h_frac = self.hp / self.max_hp if self.max_hp > 0 else 0
@@ -570,15 +597,15 @@ class IdleHero(Game):
             f" H[{hc}]{hero_bar}[/]{self.hp:.0f}/{self.max_hp:.0f}"
             f" M[red]{mon_bar}[/]{self.m_hp:.0f}/{self.m_max_hp:.0f}"
         )
-        lines.append("║" + hp_bar_line.ljust(W - 2) + "║")
+        lines.append(make_bordered_line(hp_bar_line))
 
         # ── blank separator ──
-        lines.append("║" + " " * (W - 2) + "║")
+        lines.append(Text("║" + " " * (W - 2) + "║"))
 
         # ── combat log header ──
         if self.companion:
             cgl = self.upgrade_levels.get("companion_gear", 0)
-            comp_part = f"  🐾{COMPANION_DPS_BASE * (1.0 + cgl):.1f}dps"
+            comp_part = f"  [magenta]C.[/] {COMPANION_DPS_BASE * (1.0 + cgl):.1f}dps"
         else:
             comp_part = ""
         log_header = (
@@ -586,7 +613,7 @@ class IdleHero(Game):
             f" vs {self._dps_monster():.1f} dps)"
             f"{comp_part} ──"
         )
-        lines.append("║" + log_header.ljust(W - 2) + "║")
+        lines.append(make_bordered_line(log_header))
 
         # ── log entries (up to 4) ──
         for entry in self.log[-4:]:
@@ -603,13 +630,19 @@ class IdleHero(Game):
             else:
                 coloured = entry
             entry_str = f"  > {coloured}"
-            lines.append("║" + entry_str.ljust(W - 2) + "║")
+            lines.append(make_bordered_line(entry_str))
 
         # ── fill remaining rows ──
         while len(lines) < GRID_HEIGHT - 1:
-            lines.append("║" + " " * (W - 2) + "║")
+            lines.append(Text("║" + " " * (W - 2) + "║"))
 
         # ── bottom border ──
-        lines.append("╚" + "═" * (W - 2) + "╝")
+        lines.append(Text("╚" + "═" * (W - 2) + "╝"))
 
-        return "\n".join(lines)
+        # Join lines with newlines
+        result = Text()
+        for i, line in enumerate(lines):
+            result.append(line)
+            if i < len(lines) - 1:
+                result.append("\n")
+        return result

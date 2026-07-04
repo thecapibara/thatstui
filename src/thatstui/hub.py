@@ -394,7 +394,7 @@ class GameScreen(Screen):
         state_color = "red" if game.paused else "green"
         stats_text = (
             f"[bold cyan]{i18n.tr('speed')}:[/] ×{game.speed}  "
-            f"[bold {state_color}]{'⏸ ' + state if game.paused else '▶ ' + state}[/]\n"
+            f"[bold {state_color}]{'|| ' + state if game.paused else '> ' + state}[/]\n"
             + "\n".join(status_lines)
         )
         self.query_one("#stats-panel", Static).update(stats_text)

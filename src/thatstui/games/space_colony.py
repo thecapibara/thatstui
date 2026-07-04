@@ -486,11 +486,11 @@ class SpaceColony(Game):
 
     def status_lines(self) -> list[str]:
         return [
-            f"💰 {self._tr('credits')}: [green]{self.credits:.1f}[/]  "
-            f"👨‍🚀 {self._tr('pop')}: [cyan]{self.population}/{self.pop_cap}[/]",
-            f"[yellow]⚡ {self._tr('energy')}: {self.energy:.1f}[/]  "
-            f"[green]🍔 {self._tr('food')}: {self.food:.1f}[/]  "
-            f"[blue]💧 {self._tr('water')}: {self.water:.1f}[/]  "
+            f"[green]$[/] {self._tr('credits')}: [green]{self.credits:.1f}[/]  "
+            f"[cyan]P[/] {self._tr('pop')}: [cyan]{self.population}/{self.pop_cap}[/]",
+            f"[yellow]E {self._tr('energy')}: {self.energy:.1f}[/]  "
+            f"[green]F {self._tr('food')}: {self.food:.1f}[/]  "
+            f"[blue]W {self._tr('water')}: {self.water:.1f}[/]  "
             f"[cyan]O₂ {self._tr('oxygen')}: {self.oxygen:.1f}[/]",
         ]
 

@@ -517,10 +517,10 @@ class StockMarket(Game):
         """Short text lines shown in the hub menu."""
         nw = self._net_worth()
         return [
-            f"💰 {self._tr('cash')}: [green]${self.cash:,.2f}[/]",
-            f"📊 {self._tr('net')}: [cyan]${nw:,.2f}[/]",
-            f"📈 {self._tr('stocks')}: {len(self.stocks)}",
-            f"🤖 {self._tr('aggro').format(self.upgrade_levels.get('aggressive', 0))}",
+            f"[green]$[/] {self._tr('cash')}: [green]${self.cash:,.2f}[/]",
+            f"[cyan]■[/] {self._tr('net')}: [cyan]${nw:,.2f}[/]",
+            f"[yellow]▲[/] {self._tr('stocks')}: {len(self.stocks)}",
+            f"[blue]●[/] {self._tr('aggro').format(self.upgrade_levels.get('aggressive', 0))}",
         ]
 
     def _sparkline(self, values: list[float], width: int = 40) -> str:

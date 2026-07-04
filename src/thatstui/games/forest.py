@@ -646,15 +646,15 @@ class Forest(Game):
     def status_lines(self) -> list[str]:
         """Short status lines shown in the hub menu."""
         lines = [
-            f"🌱 [green]{self._tr('status_biomass')}: {self.biomass:.1f}[/]",
-            f"🌲 [green]{self._tr('status_trees')}: {len(self.trees)}/{MAX_TREES}[/]",
-            f"🐇 [cyan]{self._tr('status_herbivores')}: {len(self.herbivores)}/{MAX_HERBIVORES}[/]",
+            f"[green]v[/] [green]{self._tr('status_biomass')}: {self.biomass:.1f}[/]",
+            f"[green]▲[/] [green]{self._tr('status_trees')}: {len(self.trees)}/{MAX_TREES}[/]",
+            f"[cyan]r[/] [cyan]{self._tr('status_herbivores')}: {len(self.herbivores)}/{MAX_HERBIVORES}[/]",
         ]
         if self.carnivores or self.carnivores_unlocked:
             lines.append(
-                f"🐺 [red]{self._tr('status_carnivores')}: {len(self.carnivores)}/{MAX_CARNIVORES}[/]"
+                f"[red]w[/] [red]{self._tr('status_carnivores')}: {len(self.carnivores)}/{MAX_CARNIVORES}[/]"
             )
-        lines.append(f"🌿 {self._tr('status_fertility')}: {self.fertility:.1f}")
+        lines.append(f"[green]~[/] {self._tr('status_fertility')}: {self.fertility:.1f}")
         return lines
 
     def render_grid(self) -> str:
