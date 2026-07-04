@@ -17,7 +17,6 @@ VISUALS: list[tuple[str, str, str, str, VisualFactory]] = [
     ("fish_tank", "Fish Tank", "Акваріум", "anim", lambda: _anim("fish_tank", "FishTank")),
     ("plasma", "Plasma Waves", "Плазма", "anim", lambda: _anim("plasma", "Plasma")),
     ("snake", "Snake", "Змійка", "anim", lambda: _anim("snake", "Snake")),
-    ("fractal_tree", "Fractal Tree", "Фрактальне дерево", "anim", lambda: _anim("fractal_tree", "FractalTree")),
     ("fire", "Fire Show", "Вогняне шоу", "anim", lambda: _anim("fire", "FireShow")),
     ("life", "Game of Life", "Гра життя", "anim", lambda: _anim("life", "GameOfLife")),
 ]
