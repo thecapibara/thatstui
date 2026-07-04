@@ -86,27 +86,42 @@ class FishTank:
 
         W, H = self.WIDTH, self.HEIGHT
 
-        # ---- build plain-character grid ------------------------------------
+        # ---- build plain-character grid and color grid --------------------
         grid = [[" " for _ in range(W)] for _ in range(H)]
+        color_grid: list[list[str | None]] = [[None for _ in range(W)] for _ in range(H)]
 
         self._draw_surface(grid)
         self._draw_sand(grid)
         self._draw_seaweed(grid, dt_total)
         self._update_bubbles(grid, dt)
-        fish_spans = self._update_fish(grid, dt)
+        self._update_fish(grid, color_grid, dt)
 
         # ---- apply rich markup (fish colours) ------------------------------
         lines: list[str] = []
         for y in range(H):
-            raw = "".join(grid[y])
-            spans = sorted(
-                (s for s in fish_spans if s[0] == y),
-                key=lambda s: s[1],
-                reverse=True,
-            )
-            for _, x_start, x_end, colour in spans:
-                raw = f"{raw[:x_start]}[{colour}]{raw[x_start:x_end]}[/]{raw[x_end:]}"
-            lines.append(raw)
+            row_parts = []
+            current_color = None
+            current_span = []
+            for x in range(W):
+                char = grid[y][x]
+                color = color_grid[y][x]
+                if color != current_color:
+                    if current_span:
+                        span_text = "".join(current_span)
+                        if current_color:
+                            row_parts.append(f"[{current_color}]{span_text}[/]")
+                        else:
+                            row_parts.append(span_text)
+                        current_span = []
+                    current_color = color
+                current_span.append(char)
+            if current_span:
+                span_text = "".join(current_span)
+                if current_color:
+                    row_parts.append(f"[{current_color}]{span_text}[/]")
+                else:
+                    row_parts.append(span_text)
+            lines.append("".join(row_parts))
 
         return "\n".join(lines)
 
@@ -160,15 +175,11 @@ class FishTank:
     def _update_fish(
         self,
         grid: list[list[str]],
+        color_grid: list[list[str | None]],
         dt: float,
-    ) -> list[tuple[int, int, int, str]]:
-        """Move fish, bounce off walls, record colour spans.
-
-        Returns a list of ``(y, x_start, x_end, colour)`` tuples for
-        post-processing into rich markup.
-        """
+    ) -> None:
+        """Move fish, bounce off walls, record colours in color_grid."""
         W, H = len(grid[0]), len(grid)
-        spans: list[tuple[int, int, int, str]] = []
 
         for f in self.fish:
             f["x"] += f["direction"] * f["speed"] * dt
@@ -189,7 +200,4 @@ class FishTank:
                 col = fx + i
                 if 0 <= col < W and 0 <= fy < H:
                     grid[fy][col] = ch
-
-            spans.append((fy, fx, fx + species_len, f["color"]))
-
-        return spans
+                    color_grid[fy][col] = f["color"]
