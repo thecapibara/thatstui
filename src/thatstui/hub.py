@@ -553,6 +553,11 @@ class AnimationScreen(Screen):
         """Re-adapt animation when terminal is resized (e.g. tiling WM)."""
         self._adapt_size(event.size.width, event.size.height)
 
+    def on_key(self, event) -> None:  # type: ignore[no-untyped-def]
+        """Forward key events to the active animation if supported."""
+        if hasattr(self.animation, "handle_key"):
+            self.animation.handle_key(event.key)
+
     def _adapt_size(self, cols: int | None = None, rows: int | None = None) -> None:
         """Resize the animation to fit the current terminal area."""
         try:
