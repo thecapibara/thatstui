@@ -19,7 +19,7 @@ from thatstui.core.persistence import load_state
 from thatstui.games import GAMES
 from thatstui.visuals import VISUALS
 
-_TICK_INTERVAL = 0.1
+_TICK_INTERVAL = 0.04
 _SAVE_EVERY_TICKS = max(1, round(5.0 / _TICK_INTERVAL))
 
 

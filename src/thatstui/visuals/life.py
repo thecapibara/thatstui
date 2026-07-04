@@ -62,7 +62,7 @@ class GameOfLife:
                     if random.random() < 0.22:
                         self.cells[y][x] = True
                         self.age[y][x] = 1
-                        self.glow[y][x] = 4
+                        self.glow[y][x] = 8
 
         elif self.preset == 1:
             # Gosper Glider Gun
@@ -90,7 +90,7 @@ class GameOfLife:
                 if 0 <= y < H and 0 <= x < W:
                     self.cells[y][x] = True
                     self.age[y][x] = 1
-                    self.glow[y][x] = 4
+                    self.glow[y][x] = 8
 
         elif self.preset == 2:
             # Pulsar Oscillators
@@ -107,15 +107,15 @@ class GameOfLife:
                 if 0 <= y < H and 0 <= x < W:
                     self.cells[y][x] = True
                     self.age[y][x] = 1
-                    self.glow[y][x] = 4
+                    self.glow[y][x] = 8
 
     def frame(self, dt_total: float) -> Text:
         dt = dt_total - self._last_dt
         self._last_dt = dt_total
 
-        # Run simulation updates every 0.12 seconds
+        # Run simulation updates every 0.06 seconds
         self._update_timer += dt
-        if self._update_timer >= 0.12:
+        if self._update_timer >= 0.06:
             self._update_timer = 0.0
             self._tick_game_of_life()
 
@@ -139,14 +139,14 @@ class GameOfLife:
                     else:
                         char, color = "█", "#00ff66"  # Mature: neon green
                 else:
-                    if cell_glow == 4:
+                    if cell_glow in (7, 8):
                         char, color = "x", "#ff00ff"  # Fade 1: magenta
-                    elif cell_glow == 3:
-                        char, color = "+", "#880088"  # Fade 2: dark purple
-                    elif cell_glow == 2:
-                        char, color = ".", "#660022"  # Fade 3: deep red/brown
-                    elif cell_glow == 1:
-                        char, color = ".", "#2b0011"  # Fade 4: dim tail
+                    elif cell_glow in (5, 6):
+                        char, color = "+", "#990099"  # Fade 2: dark purple
+                    elif cell_glow in (3, 4):
+                        char, color = ".", "#550033"  # Fade 3: deep red/brown
+                    elif cell_glow in (1, 2):
+                        char, color = ".", "#220011"  # Fade 4: dim tail
                     else:
                         char, color = " ", None
 
@@ -227,7 +227,7 @@ class GameOfLife:
                     if neighbors in (2, 3):
                         next_cells[y][x] = True
                         self.age[y][x] += 1
-                        self.glow[y][x] = 4
+                        self.glow[y][x] = 8
                     else:
                         next_cells[y][x] = False
                         self.age[y][x] = 0
@@ -235,7 +235,7 @@ class GameOfLife:
                     if neighbors == 3:
                         next_cells[y][x] = True
                         self.age[y][x] = 1
-                        self.glow[y][x] = 4
+                        self.glow[y][x] = 8
                     else:
                         next_cells[y][x] = False
                         self.age[y][x] = 0
