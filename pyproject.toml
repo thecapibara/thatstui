@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "thatstui"
+version = "0.1.0"
+description = "Terminal idle-games suite"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "thatstui"}]
+dependencies = [
+    "textual>=0.60",
+    "platformdirs>=4.0",
+]
+
+[project.scripts]
+thatstui = "thatstui.hub:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/thatstui"]
