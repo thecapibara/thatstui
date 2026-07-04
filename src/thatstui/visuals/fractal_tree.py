@@ -1,8 +1,12 @@
-"""Fractal Tree Visualizer with wind sway, growth animation, and multiple tree types."""
+"""Fractal Tree Visualizer with wind sway, growth animation, and multiple tree types.
+
+Uses rich.text.Text for rendering to avoid escaping bugs with backslashes.
+"""
 
 import math
 import random
 from typing import Final
+from rich.text import Text
 
 
 class FractalTree:
@@ -45,13 +49,13 @@ class FractalTree:
                 self.tree_type = 3
                 self.growth = 0.0
 
-    def frame(self, dt_total: float) -> str:
+    def frame(self, dt_total: float) -> Text:
         dt = dt_total - self._last_dt
         self._last_dt = dt_total
 
-        # Update growth factor (fully grown in 1.5 seconds)
+        # Update growth factor (fully grown in 1.2 seconds)
         if self.growth < 1.0:
-            self.growth = min(1.0, self.growth + dt / 1.5)
+            self.growth = min(1.0, self.growth + dt / 1.2)
 
         W, H = self.WIDTH, self.HEIGHT
         grid = [[" " for _ in range(W)] for _ in range(H)]
@@ -63,7 +67,7 @@ class FractalTree:
             color_grid[H - 1][x] = "green" if self.tree_type != 2 else "yellow"
 
         # Calculate wind sway using a sine wave
-        sway = math.sin(dt_total * 2.0) * 0.08
+        sway = math.sin(dt_total * 1.8) * 0.07
 
         # Draw recursive tree
         # Initial branch length based on height
@@ -72,32 +76,42 @@ class FractalTree:
         y_start = float(H - 2)
         max_depth = 5 if self.tree_type != 3 else 6
 
-        # Draw the tree structure
+        # Draw a thicker trunk base to make it look sturdy and realistic
+        trunk_base_y = int(y_start)
+        for ty in range(trunk_base_y - 2, trunk_base_y + 1):
+            if 0 <= ty < H - 1:
+                # Triple width trunk base
+                for tx in [int(x_start) - 1, int(x_start), int(x_start) + 1]:
+                    if 0 <= tx < W:
+                        grid[ty][tx] = "┃" if tx == int(x_start) else "│"
+                        color_grid[ty][tx] = "yellow"
+
+        # Draw the tree structure recursively
         leaf_coords: list[tuple[float, float]] = []
-        self._draw_branch(grid, color_grid, x_start, y_start, initial_length, 0.0, max_depth, max_depth, sway, leaf_coords)
+        self._draw_branch(grid, color_grid, x_start, y_start - 2, initial_length, 0.0, max_depth, max_depth, sway, leaf_coords)
 
         # Spawn new falling particles at leaf tips occasionally
         if self.growth >= 0.8 and leaf_coords:
             for lx, ly in leaf_coords:
-                if random.random() < 0.015:  # small chance per leaf tip
+                if random.random() < 0.02:  # small chance per leaf tip
                     if self.tree_type == 0:
-                        char = random.choice(["🌸", "o", "."])
-                        color = "pink"
+                        char = random.choice(["*", "o", "."])
+                        color = "magenta"
                     elif self.tree_type == 1:
-                        char = random.choice(["@", "o"]) if random.random() < 0.2 else "o"
+                        char = random.choice(["@", "o"]) if random.random() < 0.25 else "o"
                         color = "red" if char == "@" else "green"
                     elif self.tree_type == 2:
-                        char = "*"
-                        color = random.choice(["yellow", "orange", "red"])
+                        char = random.choice(["*", "o"])
+                        color = random.choice(["yellow", "red"])  # Orange is mapped to yellow/red
                     else:  # Pine (falling pine cones or snow)
-                        char = "*" if random.random() < 0.8 else "%"
+                        char = "*" if random.random() < 0.85 else "%"
                         color = "white" if char == "*" else "yellow"
 
                     self.particles.append({
                         "x": lx,
                         "y": ly,
-                        "vx": random.uniform(-1.0, 1.0),
-                        "vy": random.uniform(1.5, 3.5),
+                        "vx": random.uniform(-0.8, 0.8),
+                        "vy": random.uniform(1.5, 3.0),
                         "char": char,
                         "color": color,
                         "sway_offset": random.uniform(0, 10)
@@ -106,64 +120,76 @@ class FractalTree:
         # Update and draw particles
         next_particles = []
         for p in self.particles:
-            p["x"] += p["vx"] * dt + math.sin(dt_total * 3.0 + p["sway_offset"]) * 0.1
+            p["x"] += p["vx"] * dt + math.sin(dt_total * 2.5 + p["sway_offset"]) * 0.08
             p["y"] += p["vy"] * dt
             
             px, py = int(round(p["x"])), int(p["y"])
             if 0 <= px < W and 0 <= py < H - 1:
-                grid[py][px] = p["char"]
-                color_grid[py][px] = p["color"]
+                # Only overwrite empty spaces to avoid drawing over branches
+                if grid[py][px] == " ":
+                    grid[py][px] = p["char"]
+                    color_grid[py][px] = p["color"]
                 next_particles.append(p)
         self.particles = next_particles
 
-        # Build lines with color formatting
-        lines: list[str] = []
+        # Build lines using rich.text.Text to avoid any markup escaping bugs
+        text = Text()
         for y in range(H):
-            row_parts = []
+            line_str = "".join(grid[y])
+            line = Text(line_str)
+            
+            # Apply styles to color segments
             current_color = None
-            current_span = []
+            start_x = -1
             for x in range(W):
-                char = grid[y][x]
                 color = color_grid[y][x]
                 if color != current_color:
-                    if current_span:
-                        span_text = "".join(current_span)
-                        if current_color:
-                            row_parts.append(f"[{current_color}]{span_text}[/]")
-                        else:
-                            row_parts.append(span_text)
-                        current_span = []
+                    if current_color is not None and start_x != -1:
+                        line.stylize(current_color, start_x, x)
                     current_color = color
-                current_span.append(char)
-            if current_span:
-                span_text = "".join(current_span)
-                if current_color:
-                    row_parts.append(f"[{current_color}]{span_text}[/]")
-                else:
-                    row_parts.append(span_text)
-            lines.append("".join(row_parts))
+                    start_x = x if color is not None else -1
+            if current_color is not None and start_x != -1:
+                line.stylize(current_color, start_x, W)
+                
+            text.append(line)
+            if y < H - 1:
+                text.append("\n")
 
-        # Add top bar with type selection indicator
+        # Overlay the top menu selection bar directly onto row 0
         names = ["Sakura", "Apple Tree", "Autumn Oak", "Pine"]
         names_uk = ["Сакура", "Яблуня", "Осінній дуб", "Сосна"]
         
-        indicator_parts = []
+        top_bar = Text()
         for idx in range(4):
             label = f"{names[idx]}/{names_uk[idx]}"
             if idx == self.tree_type:
-                indicator_parts.append(f"[bold yellow]▶ {label} ◀[/]")
+                top_bar.append(f"▶ {label} ◀", style="bold yellow")
             else:
-                indicator_parts.append(f"[dim]{idx+1}: {label}[/]")
+                top_bar.append(f"{idx+1}: {label}", style="dim")
+            if idx < 3:
+                top_bar.append("  |  ", style="dim")
+                
+        # Center the top bar on the first row
+        padding = (W - len(top_bar)) // 2
+        if padding > 0:
+            centered_top_bar = Text(" " * padding) + top_bar + Text(" " * padding)
+        else:
+            centered_top_bar = top_bar
+            
+        # Replace the first line of Text with centered_top_bar
+        # Text object contains lines split by '\n', we can slice or build it cleanly.
+        # But even simpler: let's build the final text object by prepending the centered top bar!
+        # First we remove the first line of 'text'.
+        lines_text = text.split("\n")
+        lines_text[0] = centered_top_bar
         
-        top_bar = "  |  ".join(indicator_parts)
-        # We prepend the top bar. Note that we must adjust for top bar row count.
-        # To make it fit within height H, we can render the top bar at row 0 instead of shifting.
-        # But even simpler, we can return the top bar as part of the output string by replacing row 0.
-        # Let's replace the first line of output with the formatted top bar centered
-        centered_top_bar = top_bar.center(W)
-        lines[0] = centered_top_bar
+        final_text = Text()
+        for i, line in enumerate(lines_text):
+            final_text.append(line)
+            if i < len(lines_text) - 1:
+                final_text.append("\n")
 
-        return "\n".join(lines)
+        return final_text
 
     def _draw_branch(
         self,
@@ -183,19 +209,19 @@ class FractalTree:
             W, H = self.WIDTH, self.HEIGHT
             if 0 <= lx < W and 0 <= ly < H - 1:
                 leaf_coords.append((x, y))
-                if self.tree_type == 0:  # Sakura (pink)
-                    grid[ly][lx] = "🌸" if random.random() < 0.3 else "o"
-                    color_grid[ly][lx] = "pink"
+                if self.tree_type == 0:  # Sakura (magenta/pink)
+                    grid[ly][lx] = "*" if random.random() < 0.4 else "o"
+                    color_grid[ly][lx] = "magenta"
                 elif self.tree_type == 1:  # Apple Tree (green with red apples)
-                    if random.random() < 0.2:
+                    if random.random() < 0.25:
                         grid[ly][lx] = "@"
                         color_grid[ly][lx] = "red"
                     else:
                         grid[ly][lx] = "o"
                         color_grid[ly][lx] = "green"
-                elif self.tree_type == 2:  # Autumn Oak (orange/red/yellow)
+                elif self.tree_type == 2:  # Autumn Oak (red/yellow)
                     grid[ly][lx] = "*"
-                    color_grid[ly][lx] = random.choice(["orange", "yellow", "red"])
+                    color_grid[ly][lx] = random.choice(["yellow", "red"])
                 elif self.tree_type == 3:  # Pine (green needles)
                     grid[ly][lx] = "▲" if random.random() < 0.5 else "*"
                     color_grid[ly][lx] = "green"
@@ -208,7 +234,7 @@ class FractalTree:
         x1, y1 = int(round(x)), int(round(y))
         x2, y2 = int(round(x_end)), int(round(y_end))
 
-        # Set branch colors
+        # Set branch colors (yellow is brown-ish, green for pine)
         if self.tree_type == 3:  # Pine
             color = "green" if depth < max_depth - 1 else "yellow"
         else:
@@ -216,22 +242,24 @@ class FractalTree:
 
         self._draw_line(grid, color_grid, x1, y1, x2, y2, ("─", "│", "/", "\\"), color)
 
-        # Recurse with wind sway
-        branch_sway = sway * (max_depth - depth + 1) * 0.12
+        # Recurse with wind sway (tips sway more than base)
+        branch_sway = sway * (max_depth - depth + 1) * 0.1
 
+        # Use narrower split angles to make branches more vertical
+        # This aligns better with tall terminal characters and looks much smoother
         if self.tree_type == 3:  # Pine symmetric side branching
             self._draw_branch(grid, color_grid, x_end, y_end, length * 0.72, angle + branch_sway, depth - 1, max_depth, sway, leaf_coords)
-            self._draw_branch(grid, color_grid, x_end, y_end, length * 0.45, angle - 0.95 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
-            self._draw_branch(grid, color_grid, x_end, y_end, length * 0.45, angle + 0.95 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+            self._draw_branch(grid, color_grid, x_end, y_end, length * 0.42, angle - 0.75 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+            self._draw_branch(grid, color_grid, x_end, y_end, length * 0.42, angle + 0.75 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
         else:  # Standard split branching
             num_branches = 3 if self.tree_type == 2 else 2
             if num_branches == 2:
-                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.76, angle - 0.36 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
-                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.76, angle + 0.36 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.76, angle - 0.28 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.76, angle + 0.28 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
             else:  # Oak split
-                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.72, angle - 0.48 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.72, angle - 0.38 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
                 self._draw_branch(grid, color_grid, x_end, y_end, length * 0.65, angle + branch_sway, depth - 1, max_depth, sway, leaf_coords)
-                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.72, angle + 0.48 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
+                self._draw_branch(grid, color_grid, x_end, y_end, length * 0.72, angle + 0.38 + branch_sway, depth - 1, max_depth, sway, leaf_coords)
 
     def _draw_line(
         self,

@@ -4,6 +4,9 @@ import random
 from typing import Final
 
 
+from rich.text import Text
+
+
 class GameOfLife:
     """Conway's Game of Life simulation with neon trails and pattern presets."""
 
@@ -106,7 +109,7 @@ class GameOfLife:
                     self.age[y][x] = 1
                     self.glow[y][x] = 4
 
-    def frame(self, dt_total: float) -> str:
+    def frame(self, dt_total: float) -> Text:
         dt = dt_total - self._last_dt
         self._last_dt = dt_total
 
@@ -117,12 +120,11 @@ class GameOfLife:
             self._tick_game_of_life()
 
         W, H = self.WIDTH, self.HEIGHT
-        lines: list[str] = []
+        text = Text()
 
         for y in range(H):
-            row_parts = []
-            current_color = None
-            current_span = []
+            row_chars = []
+            row_colors = []
             for x in range(W):
                 # Determine character and color based on state
                 is_alive = self.cells[y][x]
@@ -148,42 +150,59 @@ class GameOfLife:
                     else:
                         char, color = " ", None
 
+                row_chars.append(char)
+                row_colors.append(color)
+
+            line = Text("".join(row_chars))
+            
+            # Apply styles to segments
+            current_color = None
+            start_x = -1
+            for x in range(W):
+                color = row_colors[x]
                 if color != current_color:
-                    if current_span:
-                        span_text = "".join(current_span)
-                        if current_color:
-                            row_parts.append(f"[{current_color}]{span_text}[/]")
-                        else:
-                            row_parts.append(span_text)
-                        current_span = []
+                    if current_color is not None and start_x != -1:
+                        line.stylize(current_color, start_x, x)
                     current_color = color
-                current_span.append(char)
+                    start_x = x if color is not None else -1
+            if current_color is not None and start_x != -1:
+                line.stylize(current_color, start_x, W)
                 
-            if current_span:
-                span_text = "".join(current_span)
-                if current_color:
-                    row_parts.append(f"[{current_color}]{span_text}[/]")
-                else:
-                    row_parts.append(span_text)
-            lines.append("".join(row_parts))
+            text.append(line)
+            if y < H - 1:
+                text.append("\n")
 
         # Add top bar menu
         presets = ["Random", "Gosper Gun", "Pulsar Oscillators"]
         presets_uk = ["Хаос", "Планерна гармата", "Осцилятори"]
         
-        indicator_parts = []
+        top_bar = Text()
         for idx in range(3):
             label = f"{presets[idx]}/{presets_uk[idx]}"
             if idx == self.preset:
-                indicator_parts.append(f"[bold yellow]▶ {label} ◀[/]")
+                top_bar.append(f"▶ {label} ◀", style="bold yellow")
             else:
-                indicator_parts.append(f"[dim]{idx+1}: {label}[/]")
-        indicator_parts.append("[dim]4/R: Reset/Скидання[/]")
+                top_bar.append(f"{idx+1}: {label}", style="dim")
+            top_bar.append("  |  ", style="dim")
+        top_bar.append("4/R: Reset/Скидання", style="dim")
         
-        top_bar = "  |  ".join(indicator_parts)
-        lines[0] = top_bar.center(W)
+        # Center the top bar on the first row
+        padding = (W - len(top_bar)) // 2
+        if padding > 0:
+            centered_top_bar = Text(" " * padding) + top_bar + Text(" " * padding)
+        else:
+            centered_top_bar = top_bar
 
-        return "\n".join(lines)
+        lines_text = text.split("\n")
+        lines_text[0] = centered_top_bar
+        
+        final_text = Text()
+        for i, line in enumerate(lines_text):
+            final_text.append(line)
+            if i < len(lines_text) - 1:
+                final_text.append("\n")
+
+        return final_text
 
     def _tick_game_of_life(self) -> None:
         W, H = self.WIDTH, self.HEIGHT

@@ -4,6 +4,9 @@ import random
 from typing import Final
 
 
+from rich.text import Text
+
+
 class FireShow:
     """A terminal fire animation using the classic Doom Fire propagation algorithm."""
 
@@ -65,61 +68,76 @@ class FireShow:
         elif key in ("4", "num_4"):
             self.mode = 3
 
-    def frame(self, dt_total: float) -> str:
+    def frame(self, dt_total: float) -> Text:
         # Limit frame rate / compute updates
         self._spread_fire()
 
         W, H = self.WIDTH, self.HEIGHT
-        lines: list[str] = []
+        text = Text()
 
-        # Render rows (excluding the bottom permanent heat source to keep it clean, or keep it)
+        # Render rows (excluding the bottom permanent heat source)
         for y in range(H - 1):
-            row_parts = []
-            current_color = None
-            current_span = []
-            
+            row_chars = []
+            row_colors = []
             for x in range(W):
                 heat = self.fire_grid[y][x]
                 char, color = self.PALETTE[heat]
+                row_chars.append(char)
+                row_colors.append(color if color else None)
                 
+            line = Text("".join(row_chars))
+            
+            # Apply styles to segments
+            current_color = None
+            start_x = -1
+            for x in range(W):
+                color = row_colors[x]
                 if color != current_color:
-                    if current_span:
-                        span_text = "".join(current_span)
-                        if current_color:
-                            row_parts.append(f"[{current_color}]{span_text}[/]")
-                        else:
-                            row_parts.append(span_text)
-                        current_span = []
+                    if current_color is not None and start_x != -1:
+                        line.stylize(current_color, start_x, x)
                     current_color = color
-                current_span.append(char)
+                    start_x = x if color is not None else -1
+            if current_color is not None and start_x != -1:
+                line.stylize(current_color, start_x, W)
                 
-            if current_span:
-                span_text = "".join(current_span)
-                if current_color:
-                    row_parts.append(f"[{current_color}]{span_text}[/]")
-                else:
-                    row_parts.append(span_text)
-            lines.append("".join(row_parts))
+            text.append(line)
+            text.append("\n")
 
         # Add the bottom heat source row styled in pure white-hot
-        lines.append(f"[#ffffff]{'█' * W}[/]")
+        bottom_row = Text("█" * W, style="#ffffff")
+        text.append(bottom_row)
 
         # Center top menu selection
         modes = ["Calm", "Wind Left", "Wind Right", "Wildfire"]
         modes_uk = ["Штиль", "Вітер вліво", "Вітер вправо", "Буря"]
         
-        indicator_parts = []
+        top_bar = Text()
         for idx in range(4):
             label = f"{modes[idx]}/{modes_uk[idx]}"
             if idx == self.mode:
-                indicator_parts.append(f"[bold yellow]▶ {label} ◀[/]")
+                top_bar.append(f"▶ {label} ◀", style="bold yellow")
             else:
-                indicator_parts.append(f"[dim]{idx+1}: {label}[/]")
-        
-        top_bar = "  |  ".join(indicator_parts)
-        lines[0] = top_bar.center(W)
+                top_bar.append(f"{idx+1}: {label}", style="dim")
+            if idx < 3:
+                top_bar.append("  |  ", style="dim")
+                
+        # Center the top bar on the first row
+        padding = (W - len(top_bar)) // 2
+        if padding > 0:
+            centered_top_bar = Text(" " * padding) + top_bar + Text(" " * padding)
+        else:
+            centered_top_bar = top_bar
 
-        return "\n".join(lines)
+        lines_text = text.split("\n")
+        lines_text[0] = centered_top_bar
+        
+        final_text = Text()
+        for i, line in enumerate(lines_text):
+            final_text.append(line)
+            if i < len(lines_text) - 1:
+                final_text.append("\n")
+
+        return final_text
 
     def _spread_fire(self) -> None:
         W, H = self.WIDTH, self.HEIGHT
